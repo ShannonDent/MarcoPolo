@@ -38,12 +38,11 @@ def parse_time(time_str):
     return Time(_hh, _mm, _ss, _us)
 
 telemetry_dict = {
-    'hhmmss' : Time(hour=12, minute=34, second=56, microsecond=0),
-    "telecommand id" : 1,
+    'data' : 1,
 }
 
 while True:
-    radio.send_telemetry(**telemetry_dict)
+    radio.send_data(**telemetry_dict)
     time.sleep_ms(1000)
     print("Sending Telemetry")
 
