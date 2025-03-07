@@ -1,0 +1,55 @@
+# uPython imports
+from machine import UART, Pin
+from ucollections import namedtuple
+#from datetime import datetime as dt
+import time
+
+# tuppersat imports
+from tuppersat.radio import TupperSatRadio
+
+# constants
+address = 0x6D
+callsign = 'MarcoPolo'
+BAUDRATE = 38400
+
+# create the UART interface
+uart = UART(0, baudrate=BAUDRATE, tx=Pin(0), rx=Pin(1))
+
+radio = TupperSatRadio(uart, address, callsign)
+
+Time = namedtuple('Time', 'hour minute second microsecond')
+
+def chunk(string, n):
+    """Break a string into chunks of length n."""
+    return (string[i:i+n] for i in range(0, len(string), n))
+
+def parse_time(time_str):
+    """Parse a time string HHMMSS.SSS into a Time object."""
+
+    # split out the second and sub-second times
+    _hhmmss, _milliseconds = time_str.split('.')
+
+    # compute the sub-second time in microseconds
+    _us = int(_milliseconds) * 1000
+
+    # compute the hours, minutes and seconds
+    _hh, _mm, _ss = (int(x) for x in chunk(_hhmmss, 2))
+
+    return Time(_hh, _mm, _ss, _us)
+
+telemetry_dict = {
+    'hhmmss' : Time(hour=12, minute=34, second=56, microsecond=0),
+    'latitude' : 53.3096 ,
+    'longitude' : -6.2186 ,
+    'hdop' : 1.53 ,
+    'altitude' : 121.4 ,
+    't_internal' : 21.062 ,
+    't_external' : -7.562 ,
+    'pressure' : 980.0274 ,
+}
+
+while True:
+    radio.send_telemetry(**telemetry_dict)
+    time.sleep_ms(1000)
+    print("Sending Telemetry")
+
