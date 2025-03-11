@@ -1,0 +1,65 @@
+# Micropython imports
+from machine import UART, Pin
+
+# Tuppersat imports
+from tuppersat.rhserial import RXHandler
+
+# Constants
+UART_ID = 0
+TX_PIN = 0
+RX_PIN = 1
+T3_BAUDRATE = 38400
+
+def unpack_message(msg):
+    """Extracts message header and body from msg bytearray.
+
+    The input msg should contain only the 4 header bytes and the payload.
+    Initial DLE+STX and final DLE+ETX+CHECKSUM bytes should be removed.
+    """
+    if len(msg) < 4:
+        return None  # Prevent errors if message is too short
+
+    # Extract header information
+    msgto, msgfrom, msgid, rawrssi = msg[:4]
+
+    # Normalize the RSSI value to range [-128, 127]
+    msgrssi = rawrssi - 256 if rawrssi > 127 else rawrssi
+
+    # Extract payload
+    payload = bytes(msg[4:])
+
+    return {
+        'to': msgto,
+        'from': msgfrom,
+        'id': msgid,
+        'rssi': msgrssi,
+        'message': payload,
+    }
+
+def display(message):
+    """Displays received message and RSSI if available."""
+    msgdict = unpack_message(message)  # Unpack received bytes
+    if msgdict:
+        print("Received Message:", msgdict)
+        print("RSSI:", msgdict['rssi'])
+    else:
+        print("Invalid message received:", repr(message))
+
+def loop(uart, handler):
+    """Continuously reads UART and updates the handler."""
+    if uart.any():  # Check if data is available
+        _byte = uart.read(1)
+        if _byte:
+            handler.update(_byte)
+
+def main():
+    """Initializes UART and runs the main loop."""
+    uart = UART(UART_ID, baudrate=T3_BAUDRATE, tx=Pin(TX_PIN), rx=Pin(RX_PIN))
+    handler = RXHandler(on_received=display)
+
+    # Main loop
+    while True:
+        loop(uart, handler)
+
+if __name__ == "__main__":
+    main()
